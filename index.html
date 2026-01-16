@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>MyShop</title>
+  <style>
+    body { font-family: Arial; margin: 20px; }
+    input, button { padding: 8px; margin: 5px; width: 250px; }
+    .product { border: 1px solid #ccc; padding: 10px; margin: 5px; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+
+<h2 id="title">Login</h2>
+
+<!-- LOGIN / SIGNUP -->
+<div id="auth">
+  <input id="email" placeholder="Email"><br>
+  <input id="password" type="password" placeholder="Password"><br>
+  <button onclick="login()">Login</button>
+  <button onclick="signup()">Create Account</button>
+</div>
+
+<!-- PRODUCTS -->
+<div id="home" class="hidden">
+  <h3>Products</h3>
+  <button onclick="viewCart()">🛒 Cart</button>
+  <div id="products"></div>
+</div>
+
+<!-- CART -->
+<div id="cartPage" class="hidden">
+  <h3>Cart</h3>
+  <div id="cartItems"></div>
+  <button onclick="placeOrder()">Place Order (COD)</button>
+  <button onclick="backHome()">Back</button>
+</div>
+
+<!-- FIREBASE -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+  import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged } 
+  from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+  import { getFirestore, collection, addDoc, onSnapshot } 
+  from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+
+  // 🔴 നിങ്ങളുടെ Firebase config ഇവിടെ paste ചെയ്യണം
+  const firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_PROJECT.firebaseapp.com",
+    projectId: "YOUR_PROJECT_ID",
+    storageBucket: "YOUR_PROJECT.appspot.com",
+    messagingSenderId: "XXXX",
+    appId: "XXXX"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth();
+  const db = getFirestore();
+
+  let cart = [];
+
+  window.login = () => {
+    signInWithEmailAndPassword(
+      auth,
+      email.value,
+      password.value
+    );
+  };
+
+  window.signup = () => {
+    createUserWithEmailAndPassword(
+      auth,
+      email.value,
+      password.value
+    );
+  };
+
+  onAuthStateChanged(auth, user => {
+    if (user) {
+      authView(false);
+      loadProducts();
+    }
+  });
+
+  function authView(show) {
+    document.getElementById("auth").classList.toggle("hidden", !show);
+    document.getElementById("home").classList.toggle("hidden", show);
+  }
+
+  function loadProducts() {
+    onSnapshot(collection(db, "products"), snap => {
+      products.innerHTML = "";
+      snap.forEach(doc => {
+        const p = doc.data();
+        products.innerHTML += `
+          <div class="product">
+            <b>${p.name}</b><br>
+            ₹ ${p.price}<br>
+            <button onclick='addToCart("${p.name}")'>Add</button>
+          </div>`;
+      });
+    });
+  }
+
+  window.addToCart = (name) => {
+    cart.push(name);
+    alert("Added to cart");
+  };
+
+  window.viewCart = () => {
+    home.classList.add("hidden");
+    cartPage.classList.remove("hidden");
+    cartItems.innerHTML = cart.map(i => `<p>${i}</p>`).join("");
+  };
+
+  window.backHome = () => {
+    cartPage.classList.add("hidden");
+    home.classList.remove("hidden");
+  };
+
+  window.placeOrder = async () => {
+    await addDoc(collection(db, "orders"), {
+      user: auth.currentUser.email,
+      items: cart,
+      date: new Date()
+    });
+    alert("Order Placed");
+    cart = [];
+    backHome();
+  };
+</script>
+
+</body>
+</html>
